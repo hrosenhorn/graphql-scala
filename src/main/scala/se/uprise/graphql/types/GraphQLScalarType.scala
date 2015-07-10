@@ -1,16 +1,10 @@
 package se.uprise.graphql.types
 
-trait GraphQLScalarTypeConfig {
-  val name: String
-  val description: String
-  def coerce(value: String): Boolean
-  def coerceLiteral(value: String): String
-}
-
-abstract class GraphQLScalarType extends GraphQLScalarTypeConfig with GraphQLOutputType {
-  override def coerce(value: String): Boolean = true
-  override def coerceLiteral(value: String): String = "Todo"
-  override val description: String = ""
+trait GraphQLScalarType extends GraphQLOutputType {
+  val name: String = ""
+  val description: String = ""
+  def coerce(value: String): Boolean = true
+  def coerceLiteral(value: String): String = "Todo"
 }
 
 class GraphQLString extends GraphQLScalarType {
