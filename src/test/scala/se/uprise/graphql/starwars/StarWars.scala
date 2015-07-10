@@ -166,9 +166,8 @@ class Droid extends GraphQLObjectType {
 class Query extends GraphQLObjectType {
   override def name = "Query"
 
-  field("hero", ftype = classOf[Character]) {
-    // FIXME: Return artoo
-    null
+  field("hero", ftype = classOf[Character]) { () =>
+    Data.artoo
   }
 
   val humanArgs = List(new GraphQLFieldArgument("id", classOf[GraphQLNonNull[GraphQLString]]))
