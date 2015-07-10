@@ -1,4 +1,4 @@
-package se.uprise
+package se.uprise.graphql
 
 import org.scalatest.FunSuite
 

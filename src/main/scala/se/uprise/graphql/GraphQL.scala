@@ -1,14 +1,14 @@
-package se.uprise
+package se.uprise.graphql
 
 import java.io.ByteArrayInputStream
 
 import org.antlr.v4.runtime.{CommonTokenStream, ANTLRInputStream}
-import se.uprise.error.GraphQLFormattedError
+import se.uprise.graphql.error.GraphQLFormattedError
 import se.uprise.parser.GraphQlParser.FieldContext
 import se.uprise.parser.{GraphQlBaseVisitor, GraphQlParser, GraphQlLexer}
 
 
-import se.uprise.types.GraphQLSchema
+import se.uprise.graphql.types.GraphQLSchema
 
 
 case class GraphQLResult(data: String, errors: List[GraphQLFormattedError])

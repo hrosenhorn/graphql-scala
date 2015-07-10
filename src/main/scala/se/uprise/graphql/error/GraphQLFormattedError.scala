@@ -1,4 +1,4 @@
-package se.uprise.error
+package se.uprise.graphql.error
 
 case class GraphQLErrorLocation(line: Int, number: Int)
 

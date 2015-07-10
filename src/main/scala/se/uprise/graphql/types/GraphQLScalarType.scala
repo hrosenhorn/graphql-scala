@@ -1,4 +1,4 @@
-package se.uprise.types
+package se.uprise.graphql.types
 
 trait GraphQLScalarTypeConfig {
   val name: String

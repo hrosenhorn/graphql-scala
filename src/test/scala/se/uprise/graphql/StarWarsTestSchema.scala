@@ -1,6 +1,6 @@
-package se.uprise
+package se.uprise.graphql
 
-import se.uprise.types.{GraphQLString, GraphQLFieldDefinition, GraphQLObjectType, GraphQLSchema}
+import se.uprise.graphql.types.{GraphQLFieldDefinition, GraphQLObjectType, GraphQLSchema, GraphQLString}
 
 object StarWarsTestSchema {
   val MyHeroName = "CharlieBoi"
