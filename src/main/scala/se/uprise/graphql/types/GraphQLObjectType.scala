@@ -1,11 +1,5 @@
 package se.uprise.graphql.types
 
-/**
- * Created by Håkan Rosenhorn on 2015-07-09.
- */
-class GraphQLObjectType(
-                         name: String,
-                         description: String,
-                         fields: Map[String, GraphQLFieldDefinition]) extends GraphQLOutputType {
-
+trait GraphQLObjectType extends GraphQLOutputType with GraphQLMetadata with GraphQLFields {
+  def interfaces: List[Class[_ <: GraphQLInterfaceType]] = List()
 }

@@ -1,13 +1,16 @@
 package se.uprise.graphql.types
 
-/**
- * Created by Håkan Rosenhorn on 2015-07-09.
- */
+trait GraphQLFields {
+  private var _fields: Map[String, GraphQLFieldDefinition] = Map()
+  protected def fields = _fields
+  protected def field(name: String, description: String = null, ftype: Class[_ <: GraphQLOutputType], args: List[GraphQLFieldArgument] = null,
+                      deprecationReason: String = null)(resolve: () => Any = null) = {}
+}
 
 class GraphQLFieldArgument(name: String,
-                            typ: GraphQLInputType,
-                            defaultValue: Any,
-                            description: String)
+                            typ: Class[_ <: GraphQLOutputType],
+                            defaultValue: Any = null,
+                            description: String = null)
 
 class GraphQLFieldDefinition(
                               name: String,
