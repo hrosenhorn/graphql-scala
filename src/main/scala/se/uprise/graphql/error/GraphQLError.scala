@@ -1,4 +1,7 @@
 package se.uprise.graphql.error
 
+import org.antlr.v4.runtime.RuleContext
+
 // FIXME: Extend with proper values from js ref
-case class GraphQLError(message: String) extends Exception(message)
+// FIXME: Fix stack support
+case class GraphQLError(message: String, nodes: List[RuleContext] = List.empty) extends Exception(message)

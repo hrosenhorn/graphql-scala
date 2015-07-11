@@ -1,7 +1,7 @@
 package se.uprise.graphql.execution
 
 import se.uprise.graphql.error.{GraphQLError, GraphQLFormattedError}
-import se.uprise.graphql.types.GraphQLSchema
+import se.uprise.graphql.types.{GraphQLObjectType, GraphQLSchema}
 import se.uprise.parser.GraphQlParser
 import se.uprise.parser.GraphQlParser._
 import scala.collection.JavaConversions._
@@ -59,8 +59,27 @@ object Executor {
                         root: Any,
                         operation: OperationDefinitionContext): Any = {
 
+    val rootType = getOperationRootType(exeContext.schema, operation)
+
+    //val fields = collectFields(exeContext, rootType, operation.selectionSet, {}, {});
+    operation.operationType().getText match {
+      case "mutation" => // executeFieldsSerially(exeContext, type, root, fields);
+      case _ => // executeFields(exeContext, type, root, fields);
+    }
+
   }
 
+  def getOperationRootType(schema: GraphQLSchema,
+                            operation: OperationDefinitionContext): GraphQLObjectType = {
+    operation.operationType().getText match {
+      case "query" => schema.query
+      case "mutation" => schema.mutation match {
+        case Some(mutation) => mutation
+        case None => throw new GraphQLError("Schema is not configured for mutations", List(operation))
+      }
+      case _ => throw new GraphQLError("Can only execute queries and mutations", List(operation))
+    }
+  }
 
   // FIXME: root should perhaps not be type Any
   def buildExecutionContext(schema: GraphQLSchema,
