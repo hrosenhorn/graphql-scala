@@ -4,26 +4,40 @@ import java.io.ByteArrayInputStream
 
 import org.antlr.v4.runtime.{CommonTokenStream, ANTLRInputStream}
 import se.uprise.graphql.error.GraphQLFormattedError
-import se.uprise.parser.GraphQlParser.FieldContext
+import se.uprise.graphql.execution.Executor
+import se.uprise.parser.GraphQlParser.{DocumentContext, FieldContext}
 import se.uprise.parser.{GraphQlBaseVisitor, GraphQlParser, GraphQlLexer}
 
 
 import se.uprise.graphql.types.GraphQLSchema
 
 
-case class GraphQLResult(data: String, errors: List[GraphQLFormattedError])
+/**
+ * The result of a GraphQL parse, validation and execution.
+ *
+ * `data` is the result of a successful execution of the query.
+ * `errors` is included when any errors occurred as a non-empty array.
+ */
+// FIXME: Should not be type Any
+case class GraphQLResult(data: Any, errors: List[GraphQLFormattedError])
 
 
-class GraphQlVisitor extends GraphQlBaseVisitor[Unit] {
-  override def visitField(ctx: FieldContext): Unit = {
-    println("HEJ HEJ", ctx.fieldName().NAME())
-  }
-}
+/**
+ * This is the primary entry point function for fulfilling GraphQL operations
+ * by parsing, validating, and executing a GraphQL document along side a
+ * GraphQL schema.
+ *
+ * More sophisticated GraphQL servers, such as those which persist queries,
+ * may wish to separate the validation and execution phases to a static time
+ * tooling step, and a server runtime step.
+ */
 
+
+// The rootObject seems to be some object/context you can pass along that will be available in all your resolve methods
 object GraphQL {
   def apply(schema: GraphQLSchema,
-           requestString: String,
-           rootObject: Option[String],
+            requestString: String,
+            rootObject: Any,
             variableValues: Map[String, String],
             operationName: String
              ): GraphQLResult = {
@@ -32,10 +46,15 @@ object GraphQL {
     val lexer = new GraphQlLexer(input)
     val tokens = new CommonTokenStream(lexer)
     val parser = new GraphQlParser(tokens)
-    
-    val visitor = new GraphQlVisitor()
-    visitor.visit(parser.document())
-    
+
+    val document: DocumentContext = parser.document()
+
+    Executor(schema,
+      rootObject,
+      document,
+      operationName,
+      variableValues)
+
 
     new GraphQLResult("svejs", List.empty)
   }
