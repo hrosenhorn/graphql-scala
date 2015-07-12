@@ -56,12 +56,12 @@ object Executor {
    * Implements the "Evaluating operations" section of the spec.
    */
   def executeOperation(exeContext: ExecutionContext,
-                        root: Any,
-                        operation: OperationDefinitionContext): Any = {
+                       root: Any,
+                       operation: OperationDefinitionContext): Any = {
 
-    val rootType = getOperationRootType(exeContext.schema, operation)
+    val typ = getOperationRootType(exeContext.schema, operation)
 
-    //val fields = collectFields(exeContext, rootType, operation.selectionSet, {}, {});
+    val fields = collectFields(exeContext, typ, operation.selectionSet())
     operation.operationType().getText match {
       case "mutation" => // executeFieldsSerially(exeContext, type, root, fields);
       case _ => // executeFields(exeContext, type, root, fields);
@@ -69,8 +69,54 @@ object Executor {
 
   }
 
+  /**
+   * Given a selectionSet, adds all of the fields in that selection to
+   * the passed in map of fields, and returns it at the end.
+   */
+  def collectFields(exeContext: ExecutionContext,
+                    typ: GraphQLObjectType,
+                    selectionSet: SelectionSetContext,
+                    fields: Map[String, List[SelectionContext]] = Map.empty,
+                    visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[SelectionContext]] = {
+
+
+    selectionSet.selection() flatMap { selection =>
+      selection.getRuleIndex match {
+        case GraphQlParser.RULE_field =>
+          val field = selection.field()
+
+          shouldIncludeNode(exeContext, field.directives().directive().toList) match {
+            case false => None
+            case _ => None
+          }
+
+        case GraphQlParser.RULE_inlineFragment => None
+        case GraphQlParser.RULE_fragmentSpread => None
+      }
+    }
+
+    Map.empty
+  }
+
+  /**
+   * Implements the logic to compute the key of a given field’s entry
+   */
+  // FIXME: Not sure we cover aliases here, double check with breakpoint and test
+  def getFieldEntryKey(node: FieldContext): String = {
+    node.fieldName().getText
+  }
+
+  /**
+   * Determines if a field should be included based on @if and @unless directives.
+   */
+  // FIXME: Implement properly
+  def shouldIncludeNode(exeContext: ExecutionContext,
+                        directives: List[DirectiveContext]): Boolean = {
+    true
+  }
+
   def getOperationRootType(schema: GraphQLSchema,
-                            operation: OperationDefinitionContext): GraphQLObjectType = {
+                           operation: OperationDefinitionContext): GraphQLObjectType = {
     operation.operationType().getText match {
       case "query" => schema.query
       case "mutation" => schema.mutation match {
@@ -152,16 +198,16 @@ object Executor {
 
 
     // FIXME: Implement
-//    definitionASTs map { definition =>
-//      val varName = definition.variable().NAME().getText
-//    }
+    //    definitionASTs map { definition =>
+    //      val varName = definition.variable().NAME().getText
+    //    }
 
     Map.empty
   }
 
   def getVariableValue(schema: GraphQLSchema,
                        definitionAST: VariableDefinitionContext,
-                        input: String) = {
+                       input: String) = {
 
   }
 }
