@@ -80,38 +80,42 @@ object Executor {
                     visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[SelectionContext]] = {
 
 
-    val result = selectionSet.selection() map { selection =>
+    selectionSet.selection().foldLeft(fields)((result, selection) =>
 
+      // Check for field
       selection.field() match {
         case value: FieldContext =>
-                  shouldIncludeNode(exeContext, value.directives()) match {
-                    case false => fields
-                    case _ =>
-                      val name = getFieldEntryKey(value)
-                      val merged = List[SelectionContext](selection) ++ fields.getOrElse(name, List.empty)
+          shouldIncludeNode(exeContext, value.directives()) match {
+            case false => fields
+            case _ =>
+              val name = getFieldEntryKey(value)
+              val merged = List(selection) ++ fields.getOrElse(name, List.empty)
 
-                      // The second key in the map will override the first one when merging
-                      fields ++ Map(name -> merged)
-                  }
+              // The second key in the map will override the first one when merging
+              fields ++ Map(name -> merged)
+          }
 
         case _ =>
 
+          // Check for fragment spread
           selection.fragmentSpread() match {
-            case value: FragmentSpreadContext => None
+            case value: FragmentSpreadContext =>
+              // FIXME: Implement
+              fields
             case _ =>
 
+              // Check for inline fragment
               selection.inlineFragment() match {
-                case value: InlineFragmentContext => None
+                case value: InlineFragmentContext =>
+                  // FIXME: Implement
+                  fields
                 case _ =>
                   // Is this possible?
                   throw new GraphQLError("Tried to run collectFields on unknown selection", List(selection))
               }
           }
       }
-    }
-    result
-
-    Map.empty
+    )
   }
 
   /**
