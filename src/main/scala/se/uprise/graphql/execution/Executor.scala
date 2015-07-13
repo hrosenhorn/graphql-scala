@@ -140,25 +140,21 @@ object Executor {
 
     // FIXME: Might be improved...
     val fragments: Map[String, FragmentDefinitionContext] = definitionSet flatMap { entry =>
-      entry.getRuleIndex match {
-        case GraphQlParser.RULE_fragmentDefinition =>
-          val fragment = entry.asInstanceOf[FragmentDefinitionContext]
-          Some(fragment.fragmentName().NAME().getText -> fragment)
+      entry.fragmentDefinition() match {
+        case value: FragmentDefinitionContext => Some(value.getText -> value)
         case _ => None
       }
     } toMap
 
     // FIXME: Might be improved...
     val operations: Map[String, OperationDefinitionContext] = definitionSet flatMap { entry =>
-      entry.getRuleIndex match {
-        case GraphQlParser.RULE_operationDefinition =>
-          val operation = entry.asInstanceOf[OperationDefinitionContext]
-          Some(operation.NAME().getText -> operation)
+      entry.operationDefinition() match {
+        case value: OperationDefinitionContext => Some(value.NAME().getText -> value)
         case _ => None
       }
     } toMap
 
-    if (operationName.length > 0 && operations.size != 1) {
+    if (operationName.length == 0 && operations.size != 1) {
       throw new GraphQLError("Must provide operation name if query contains multiple operations")
     }
 
