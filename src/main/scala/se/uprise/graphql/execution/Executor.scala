@@ -80,20 +80,36 @@ object Executor {
                     visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[SelectionContext]] = {
 
 
-    selectionSet.selection() flatMap { selection =>
-      selection.getRuleIndex match {
-        case GraphQlParser.RULE_field =>
-          val field = selection.field()
+    val result = selectionSet.selection() map { selection =>
 
-          shouldIncludeNode(exeContext, field.directives().directive().toList) match {
-            case false => None
-            case _ => None
+      selection.field() match {
+        case value: FieldContext =>
+                  shouldIncludeNode(exeContext, value.directives()) match {
+                    case false => fields
+                    case _ =>
+                      val name = getFieldEntryKey(value)
+                      val merged = List[SelectionContext](selection) ++ fields.getOrElse(name, List.empty)
+
+                      // The second key in the map will override the first one when merging
+                      fields ++ Map(name -> merged)
+                  }
+
+        case _ =>
+
+          selection.fragmentSpread() match {
+            case value: FragmentSpreadContext => None
+            case _ =>
+
+              selection.inlineFragment() match {
+                case value: InlineFragmentContext => None
+                case _ =>
+                  // Is this possible?
+                  throw new GraphQLError("Tried to run collectFields on unknown selection", List(selection))
+              }
           }
-
-        case GraphQlParser.RULE_inlineFragment => None
-        case GraphQlParser.RULE_fragmentSpread => None
       }
     }
+    result
 
     Map.empty
   }
@@ -111,8 +127,13 @@ object Executor {
    */
   // FIXME: Implement properly
   def shouldIncludeNode(exeContext: ExecutionContext,
-                        directives: List[DirectiveContext]): Boolean = {
-    true
+                        directives: DirectivesContext): Boolean = {
+
+    // directives can produce null pointer
+    directives match {
+      case entry: DirectivesContext => true //entry.directive() map
+      case _ => true
+    }
   }
 
   def getOperationRootType(schema: GraphQLSchema,
