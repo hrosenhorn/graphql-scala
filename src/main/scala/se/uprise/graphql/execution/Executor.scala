@@ -1,5 +1,6 @@
 package se.uprise.graphql.execution
 
+import org.antlr.v4.runtime.ParserRuleContext
 import se.uprise.graphql.error.{GraphQLError, GraphQLFormattedError}
 import se.uprise.graphql.types.{GraphQLObjectType, GraphQLSchema}
 import se.uprise.parser.GraphQlParser
@@ -49,7 +50,7 @@ object Executor {
     // FIXME: Result is currently Any
     val result = executeOperation(exeContext, root, exeContext.operation)
 
-    new ExecutionResult("FIXME", List.empty)
+    ExecutionResult(result, List.empty)
   }
 
   /**
@@ -64,10 +65,47 @@ object Executor {
     val fields = collectFields(exeContext, typ, operation.selectionSet())
     operation.operationType().getText match {
       case "mutation" => // executeFieldsSerially(exeContext, type, root, fields);
-      case _ => // executeFields(exeContext, type, root, fields);
+      case _ => executeFields(exeContext, typ, root, fields)
     }
 
   }
+
+  /**
+   * Implements the "Evaluating selection sets" section of the spec
+   * for "read" mode.
+   */
+  // FIXME: Better type than Any
+  def executeFields(exeContext: ExecutionContext,
+                    parentType: GraphQLObjectType,
+                    source: Any,
+                    fields: Map[String, List[SelectionContext]]): Any = {
+
+
+//    fields.keys.reduceLeft((results, responseName) => {
+//      val fieldASTs = fields(responseName)
+//      val result = resolveField(exeContext, parentType, source, fieldASTs)
+//    })
+
+    //selectionSet.selection().foldLeft(fields)((result, selection) =>
+    true
+
+  }
+
+  /**
+   * Resolves the field on the given source object. In particular, this
+   * figures out the value that the field returns by calling its resolve function,
+   * then calls completeValue to complete promises, coerce scalars, or execute
+   * the sub-selection-set for objects.
+   */
+  // FIXME: Better return type
+  def resolveField(exeContext: ExecutionContext,
+                    parentType: GraphQLObjectType,
+                    source: Any,
+                    fieldASTs: List[SelectionContext]): Any = {
+    //parentType.
+
+  }
+
 
   /**
    * Given a selectionSet, adds all of the fields in that selection to
@@ -97,25 +135,46 @@ object Executor {
 
         case _ =>
 
-          // Check for fragment spread
-          selection.fragmentSpread() match {
-            case value: FragmentSpreadContext =>
-              // FIXME: Implement
-              fields
+          // Check for inline fragment
+          selection.inlineFragment() match {
+            case value: InlineFragmentContext =>
+              // FIXME: Possible logic bug, investigate
+              (!shouldIncludeNode(exeContext, value.directives())
+                || !doesFragmentConditionMatch(exeContext, selection, typ)) match {
+                case false => fields
+                case _ => collectFields(exeContext, typ, value.selectionSet(), fields, visitedFragmentNames)
+              }
             case _ =>
 
-              // Check for inline fragment
-              selection.inlineFragment() match {
-                case value: InlineFragmentContext =>
-                  // FIXME: Implement
-                  fields
-                case _ =>
-                  // Is this possible?
-                  throw new GraphQLError("Tried to run collectFields on unknown selection", List(selection))
+              // Check for fragment spread
+              selection.fragmentSpread() match {
+                case value: FragmentSpreadContext =>
+                  val fragName: String = value.fragmentName().NAME().getText
+
+                  // FIXME: Possible logic bug, investigate
+                  visitedFragmentNames.getOrElse(fragName, false) || !shouldIncludeNode(exeContext, value.directives()) match {
+                    case false => fields
+                    case _ =>
+                      val fragment = exeContext.fragments(fragName)
+                      fields
+
+                    // FIXME: Implement
+                  }
+                case _ => throw new GraphQLError("Tried to run collectFields on unknown selection", List(selection))
               }
           }
       }
     )
+  }
+
+  /**
+   * Determines if a fragment is applicable to the given type.
+   */
+  // FIXME: Implement properly
+  def doesFragmentConditionMatch(exeContext: ExecutionContext,
+                                 fragment: ParserRuleContext,
+                                 typ: GraphQLObjectType): Boolean = {
+    return true
   }
 
   /**
@@ -140,6 +199,9 @@ object Executor {
     }
   }
 
+  /**
+   * Extracts the root type of the operation from the schema.
+   */
   def getOperationRootType(schema: GraphQLSchema,
                            operation: OperationDefinitionContext): GraphQLObjectType = {
     operation.operationType().getText match {
@@ -152,6 +214,10 @@ object Executor {
     }
   }
 
+  /**
+   * Constructs a ExecutionContext object from the arguments passed to
+   * execute, which we will pass throughout the other execution methods.
+   */
   // FIXME: root should perhaps not be type Any
   def buildExecutionContext(schema: GraphQLSchema,
                             root: Any,
@@ -226,6 +292,10 @@ object Executor {
     Map.empty
   }
 
+  /**
+   * Given a variable definition, and any value of input, return a value which
+   * adheres to the variable definition, or throw an error.
+   */
   def getVariableValue(schema: GraphQLSchema,
                        definitionAST: VariableDefinitionContext,
                        input: String) = {
