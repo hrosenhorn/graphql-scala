@@ -1,5 +1,7 @@
 package se.uprise.graphql.starwars
 
+//import se.uprise.graphql.starwars.Human
+
 /**
  * This defines a basic set of data for our Star Wars Schema.
  *
@@ -7,88 +9,43 @@ package se.uprise.graphql.starwars
  * fetching this data from a backend service rather than from hardcoded
  * JSON objects in a more complex demo.
  */
+
 object Data {
-  private type CharacterData = Map[String, Any]
 
-  val luke: CharacterData = Map(
-    "id" -> "1000",
-    "name" -> "Luke Skywalker",
-    "friends" -> List("1002", "1003", "2000", "2001"),
-    "appearsIn" -> List(4, 5, 6),
-    "homePlanet" -> "Tatooine"
-  )
-
-  val vader: CharacterData = Map(
-    "id" -> "1001",
-    "name" -> "Darth Vader",
-    "friends" -> List("1004"),
-    "appearsIn" -> List(4, 5, 6),
-    "homePlanet" -> "Tatooine"
-  )
-
-  val han: CharacterData = Map(
-    "id" -> "1002",
-    "name" -> "Han Solo",
-    "friends" -> List("1000", "1003", "2001"),
-    "appearsIn" -> List(4, 5, 6)
-  )
-
-  val leia: CharacterData = Map(
-    "id" -> "1003",
-    "name" -> "Leia Organa",
-    "friends" -> List("1000", "1002", "2000", "2001"),
-    "appearsIn" -> List(4, 5, 6),
-    "homePlanet" -> "Alderaan"
-  )
-
-  val tarkin: CharacterData = Map(
-    "id" -> "1004",
-    "name" -> "Wilhuff Tarkin",
-    "friends" -> List("1001"),
-    "appearsIn" -> List(4)
-  )
+  val luke = new Human("1000", "Luke Skywalker", List(1002, 1003, 2000, 2001), List(4, 5, 6), "Tatooine")
+  val vader = new Human("1001", "Darth Vader", List(1004), List(4, 5, 6), "Tatooine")
+  val han = new Human("1002", "Han Solo", List(1000, 1003, 2001), List(4, 5, 6), "")
+  val leia = new Human("1003", "Leia Organa", List(1000, 1002, 2000, 2001), List(4, 5, 6), "Alderaan")
+  val tarkin = new Human("1004", "Wilhuff Tarkin", List(1001), List(4), "")
 
   val humanData = Map(
-    1000 -> luke,
-    1001 -> vader,
-    1002 -> han,
-    1003 -> leia,
-    1004 -> tarkin
+    "1000" -> luke,
+    "1001" -> vader,
+    "1002" -> han,
+    "1003" -> leia,
+    "1004" -> tarkin
   )
 
-  val threepio: CharacterData = Map(
-    "id" -> "2000",
-    "name" -> "C-3PO",
-    "friends" -> List("1000", "1002", "1003", "2001"),
-    "appearsIn" -> List(4, 5, 6),
-    "primaryFunction" -> "Protocol"
-  )
-
-  val artoo: CharacterData = Map(
-    "id" -> "2001",
-    "name" -> "R2-D2",
-    "friends" -> List("1000", "1002", "1003"),
-    "appearsIn" -> List(4, 5, 6),
-    "primaryFunction" -> "Astromech"
-  )
+  val threepio = new Droid("2000", "C-3PO", List(1000, 1002, 1003, 2001), List(4, 5, 6), "Protocol")
+  val artoo = new Droid("2001", "R2-D2", List(1000, 1002, 1003), List(4, 5, 6), "Astromech")
 
   val droidData = Map(
-    2000 -> threepio,
-    2001 -> artoo
+    "2000" -> threepio,
+    "2001" -> artoo
   )
 
   /**
    * Helper function to get a character by ID.
    */
-  def getCharacter(id: Int): Option[CharacterData] = {
+  def getCharacter(id: String): Character = {
     // FIXME: Demonstrate use of Future?
-    Option(humanData.getOrElse(id, droidData.getOrElse(id, null)))
+    humanData.getOrElse(id, droidData(id))
   }
 
   /**
    * Allows us to query for a character's friends.
    */
-  def getFriends(character: CharacterData): List[CharacterData] = {
-    character("friends").asInstanceOf[List[Int]].map(getCharacter(_)).flatten
+  def getFriends(friendIds: Seq[Int]): List[Character] = {
+    friendIds.map({ friendId => getCharacter(friendId.toString) }).toList
   }
 }

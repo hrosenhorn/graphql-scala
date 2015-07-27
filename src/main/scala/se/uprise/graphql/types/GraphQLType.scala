@@ -1,14 +1,17 @@
 package se.uprise.graphql.types
 
 /**
- * These types may be used as input types for arguments and directives.
+ * These are all of the possible kinds of types.
  */
-trait GraphQLInputType extends GraphQLType
-
+trait GraphQLType {
 /*
   GraphQLScalarType |
+  GraphQLObjectType |
+  GraphQLInterfaceType |
+  GraphQLUnionType |
   GraphQLEnumType |
   GraphQLInputObjectType |
   GraphQLList |
   GraphQLNonNull;
  */
+}

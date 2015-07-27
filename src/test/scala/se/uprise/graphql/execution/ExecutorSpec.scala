@@ -54,14 +54,14 @@ class ExecutorSpec extends FunSpec {
 
       val ast: DocumentContext = parser.document()
 
-      class DataType extends GraphQLObjectType {
-        override def name: String = "DataType"
-        field("a", ftype = classOf[GraphQLString])_
-      }
-
-      val schema = new GraphQLSchema(new DataType())
-
-      Executor(schema, "", ast, "Example", Map.empty)
+//      class DataType extends GraphQLObjectType {
+//        override def name: String = "DataType"
+//        field("a", ftype = classOf[GraphQLString])_
+//      }
+//
+//      val schema = new GraphQLSchema(new DataType())
+//
+//      Executor(schema, "", ast, "Example", Map.empty)
 
     }
   }

@@ -2,7 +2,7 @@ package se.uprise.graphql.execution
 
 import org.antlr.v4.runtime.ParserRuleContext
 import se.uprise.graphql.error.{GraphQLError, GraphQLFormattedError}
-import se.uprise.graphql.types.{GraphQLObjectType, GraphQLSchema}
+import se.uprise.graphql.types._
 import se.uprise.parser.GraphQlParser
 import se.uprise.parser.GraphQlParser._
 import scala.collection.JavaConversions._
@@ -75,20 +75,21 @@ object Executor {
    * for "read" mode.
    */
   // FIXME: Better type than Any
+  // FIXME: Support for futures
   def executeFields(exeContext: ExecutionContext,
-                    parentType: GraphQLObjectType,
+                    parentType: Class[_ <: GraphQLObjectType],
                     source: Any,
                     fields: Map[String, List[SelectionContext]]): Any = {
 
+    val finalResults = fields.keys.reduceLeft((results, responseName) => {
+      val fieldASTs = fields(responseName)
+      val result = resolveField(exeContext, parentType, source, fieldASTs)
+      ""
+    })
 
-//    fields.keys.reduceLeft((results, responseName) => {
-//      val fieldASTs = fields(responseName)
-//      val result = resolveField(exeContext, parentType, source, fieldASTs)
-//    })
-
+    finalResults
     //selectionSet.selection().foldLeft(fields)((result, selection) =>
     true
-
   }
 
   /**
@@ -99,11 +100,37 @@ object Executor {
    */
   // FIXME: Better return type
   def resolveField(exeContext: ExecutionContext,
-                    parentType: GraphQLObjectType,
+                    parentType: Class[_ <: GraphQLObjectType],
                     source: Any,
                     fieldASTs: List[SelectionContext]): Any = {
+    val fieldAST = fieldASTs.head
+    val fieldDef = getFieldDef(exeContext.schema, parentType, fieldAST)
+
+
     //parentType.
 
+  }
+
+  /**
+   * This method looks up the field on the given type defintion.
+   * It has special casing for the two introspection fields, __schema
+   * and __typename. __typename is special because it can always be
+   * queried as a field, even in situations where no other fields
+   * are allowed, like on a Union. __schema could get automatically
+   * added to the query type, but that would require mutating type
+   * definitions, which would cause issues.
+   */
+
+  def getFieldDef(schema: GraphQLSchema,
+                   parentType: Class[_ <: GraphQLObjectType],
+                   fieldAST: SelectionContext): GraphQLOutputType = {
+    val name = fieldAST.field().fieldName().NAME().getText
+
+    //FIXME: Implement support for the introspection
+
+    //parentType.getFields(name)
+    // FIXME
+    null
   }
 
 
@@ -112,7 +139,7 @@ object Executor {
    * the passed in map of fields, and returns it at the end.
    */
   def collectFields(exeContext: ExecutionContext,
-                    typ: GraphQLObjectType,
+                    typ: Class[_ <: GraphQLObjectType],
                     selectionSet: SelectionSetContext,
                     fields: Map[String, List[SelectionContext]] = Map.empty,
                     visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[SelectionContext]] = {
@@ -173,7 +200,7 @@ object Executor {
   // FIXME: Implement properly
   def doesFragmentConditionMatch(exeContext: ExecutionContext,
                                  fragment: ParserRuleContext,
-                                 typ: GraphQLObjectType): Boolean = {
+                                 typ: Class[_ <: GraphQLObjectType]): Boolean = {
     return true
   }
 
@@ -203,7 +230,7 @@ object Executor {
    * Extracts the root type of the operation from the schema.
    */
   def getOperationRootType(schema: GraphQLSchema,
-                           operation: OperationDefinitionContext): GraphQLObjectType = {
+                           operation: OperationDefinitionContext): Class[_ <: GraphQLObjectType] = {
     operation.operationType().getText match {
       case "query" => schema.query
       case "mutation" => schema.mutation match {

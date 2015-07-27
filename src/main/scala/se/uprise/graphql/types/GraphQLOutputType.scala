@@ -1,6 +1,15 @@
 package se.uprise.graphql.types
 
 /**
- * Created by Håkan Rosenhorn on 2015-07-09.
+ * These types may be used as output types as the result of fields.
  */
-trait GraphQLOutputType
+trait GraphQLOutputType extends GraphQLType
+/*
+  GraphQLScalarType |
+  GraphQLObjectType |
+  GraphQLInterfaceType |
+  GraphQLUnionType |
+  GraphQLEnumType |
+  GraphQLList |
+  GraphQLNonNull;
+ */
