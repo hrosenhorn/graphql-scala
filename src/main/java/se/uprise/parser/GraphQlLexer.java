@@ -1,4 +1,4 @@
-// Generated from C:/Devel/graphql/tarkql/src/main/resources\GraphQl.g4 by ANTLR 4.5
+// Generated from C:/Devel/graphql/graphql-scala/src/main/resources\GraphQl.g4 by ANTLR 4.5.1
 package se.uprise.parser;
 import org.antlr.v4.runtime.Lexer;
 import org.antlr.v4.runtime.CharStream;
@@ -11,7 +11,7 @@ import org.antlr.v4.runtime.misc.*;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class GraphQlLexer extends Lexer {
-	static { RuntimeMetaData.checkVersion("4.5", RuntimeMetaData.VERSION); }
+	static { RuntimeMetaData.checkVersion("4.5.1", RuntimeMetaData.VERSION); }
 
 	protected static final DFA[] _decisionToDFA;
 	protected static final PredictionContextCache _sharedContextCache =
@@ -68,7 +68,7 @@ public class GraphQlLexer extends Lexer {
 	}
 
 	@Override
-	@NotNull
+
 	public Vocabulary getVocabulary() {
 		return VOCABULARY;
 	}

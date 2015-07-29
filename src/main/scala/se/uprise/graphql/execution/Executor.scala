@@ -1,11 +1,17 @@
 package se.uprise.graphql.execution
 
 import org.antlr.v4.runtime.ParserRuleContext
+import se.uprise.graphql.annotation.QLField
 import se.uprise.graphql.error.{GraphQLError, GraphQLFormattedError}
 import se.uprise.graphql.types._
 import se.uprise.parser.GraphQlParser
 import se.uprise.parser.GraphQlParser._
+import scala.annotation.StaticAnnotation
 import scala.collection.JavaConversions._
+import scala.reflect.api.JavaUniverse
+import scala.reflect.runtime._
+import scala.reflect.runtime.universe
+
 
 /**
  * Terminology
@@ -60,14 +66,13 @@ object Executor {
                        root: Any,
                        operation: OperationDefinitionContext): Any = {
 
-    val typ = getOperationRootType(exeContext.schema, operation)
+    val rootType = getOperationRootType(exeContext.schema, operation)
 
-    val fields = collectFields(exeContext, typ, operation.selectionSet())
+    val fields = collectFields(exeContext, rootType, operation.selectionSet())
     operation.operationType().getText match {
       case "mutation" => // executeFieldsSerially(exeContext, type, root, fields);
-      case _ => executeFields(exeContext, typ, root, fields)
+      case _ => executeFields(exeContext, rootType, root, fields)
     }
-
   }
 
   /**
@@ -77,19 +82,33 @@ object Executor {
   // FIXME: Better type than Any
   // FIXME: Support for futures
   def executeFields(exeContext: ExecutionContext,
-                    parentType: Class[_ <: GraphQLObjectType],
+                    parentType: GraphQLObjectType,
                     source: Any,
-                    fields: Map[String, List[SelectionContext]]): Any = {
+                    fields: Map[String, List[FieldContext]]): Any = {
 
-    val finalResults = fields.keys.reduceLeft((results, responseName) => {
+    val finalResults = fields.keys.foldLeft(Map[String, Any]())((results: Map[String, Any], responseName) => {
+      println("TJOHEJ")
+
       val fieldASTs = fields(responseName)
       val result = resolveField(exeContext, parentType, source, fieldASTs)
-      ""
+      // fields ++ Map(name -> merged)
+      results ++ Map(responseName -> result)
     })
 
     finalResults
     //selectionSet.selection().foldLeft(fields)((result, selection) =>
     true
+  }
+
+  /**
+   * Prepares an object map of argument values given a list of argument
+   * definitions and list of argument AST nodes.
+   */
+  // FIXME: Better Type for variables (guessing some decendant of InputType)
+  def getArgumentValues(argDefs: List[universe.Type],
+                        arguments: ArgumentsContext,
+                        variables: Map[String, Any]) = {
+
   }
 
   /**
@@ -100,12 +119,19 @@ object Executor {
    */
   // FIXME: Better return type
   def resolveField(exeContext: ExecutionContext,
-                    parentType: Class[_ <: GraphQLObjectType],
-                    source: Any,
-                    fieldASTs: List[SelectionContext]): Any = {
+                   parentType: GraphQLObjectType,
+                   source: Any,
+                   fieldASTs: List[FieldContext]): Any = {
     val fieldAST = fieldASTs.head
-    val fieldDef = getFieldDef(exeContext.schema, parentType, fieldAST)
 
+    val resolveFn = getFieldDef(exeContext.schema, parentType, fieldAST)
+    val args: List[universe.Type] = resolveFn.typeSignature.typeArgs
+
+
+    getArgumentValues(
+      args,
+      fieldAST.arguments(),
+      exeContext.variables)
 
     //parentType.
 
@@ -121,16 +147,52 @@ object Executor {
    * definitions, which would cause issues.
    */
 
+  //  def isAnnotatedWith(candidate: Class[_ <: GraphQLObjectType], annotation: Class[_ <: StaticAnnotation]) = {
+  //    val typ: universe.ClassSymbol = universe.runtimeMirror(candidate.getClassLoader).classSymbol(candidate)
+  //    val annotations: List[reflect.runtime.universe.Annotation] = typ.annotations
+  //    val qlFieldAnnotationType = universe.typeOf[QLField]
+  //    val annotation: Option[reflect.runtime.universe.Annotation] = annotations.find(a => a.tpe == qlFieldAnnotationType)
+  //    annotation match {
+  //      case Some(value) => true
+  //      case _ => false
+  //    }
+  //  }
+
+  def isAnnotatedWithField(candidate: reflect.runtime.universe.Symbol) = {
+    val qlFieldAnnotationType = universe.typeOf[QLField]
+    val annotation: Option[reflect.runtime.universe.Annotation] = candidate.annotations.find(a => a.tpe == qlFieldAnnotationType)
+    annotation match {
+      case Some(value) => true
+      case _ => false
+    }
+  }
+
+  // FIXME: This being what it is we get something going, refine, cache, make performant
+  def getFields(candidate: GraphQLObjectType) = {
+    val typ = universe.runtimeMirror(candidate.getClass.getClassLoader).classSymbol(candidate.getClass)
+
+    //val typ: universe.ClassSymbol = universe.runtimeMirror(clazzType.getClassLoader).classSymbol(clazzType)
+
+    val members: universe.MemberScope = typ.typeSignature.members
+    val fields = members.flatMap({ entry =>
+      isAnnotatedWithField(entry) match {
+        case true => Some(entry.name.toString -> entry.asMethod)
+        case _ => None
+      }
+    }).toMap
+    fields
+  }
+
   def getFieldDef(schema: GraphQLSchema,
-                   parentType: Class[_ <: GraphQLObjectType],
-                   fieldAST: SelectionContext): GraphQLOutputType = {
-    val name = fieldAST.field().fieldName().NAME().getText
+                  parentType: GraphQLObjectType,
+                  fieldAST: FieldContext): universe.MethodSymbol = {
+    val name = fieldAST.fieldName().NAME().getText
 
     //FIXME: Implement support for the introspection
 
-    //parentType.getFields(name)
-    // FIXME
-    null
+    //parentType.get
+
+    getFields(parentType)(name)
   }
 
 
@@ -139,10 +201,10 @@ object Executor {
    * the passed in map of fields, and returns it at the end.
    */
   def collectFields(exeContext: ExecutionContext,
-                    typ: Class[_ <: GraphQLObjectType],
+                    typ: GraphQLObjectType,
                     selectionSet: SelectionSetContext,
-                    fields: Map[String, List[SelectionContext]] = Map.empty,
-                    visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[SelectionContext]] = {
+                    fields: Map[String, List[FieldContext]] = Map.empty,
+                    visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[FieldContext]] = {
 
 
     selectionSet.selection().foldLeft(fields)((result, selection) =>
@@ -154,7 +216,7 @@ object Executor {
             case false => fields
             case _ =>
               val name = getFieldEntryKey(value)
-              val merged = List(selection) ++ fields.getOrElse(name, List.empty)
+              val merged = List(value) ++ fields.getOrElse(name, List.empty)
 
               // The second key in the map will override the first one when merging
               fields ++ Map(name -> merged)
@@ -169,7 +231,8 @@ object Executor {
               (!shouldIncludeNode(exeContext, value.directives())
                 || !doesFragmentConditionMatch(exeContext, selection, typ)) match {
                 case false => fields
-                case _ => collectFields(exeContext, typ, value.selectionSet(), fields, visitedFragmentNames)
+                case _ =>
+                  collectFields(exeContext, typ, value.selectionSet(), fields, visitedFragmentNames)
               }
             case _ =>
 
@@ -200,7 +263,7 @@ object Executor {
   // FIXME: Implement properly
   def doesFragmentConditionMatch(exeContext: ExecutionContext,
                                  fragment: ParserRuleContext,
-                                 typ: Class[_ <: GraphQLObjectType]): Boolean = {
+                                 typ: GraphQLObjectType): Boolean = {
     return true
   }
 
@@ -230,7 +293,7 @@ object Executor {
    * Extracts the root type of the operation from the schema.
    */
   def getOperationRootType(schema: GraphQLSchema,
-                           operation: OperationDefinitionContext): Class[_ <: GraphQLObjectType] = {
+                           operation: OperationDefinitionContext): GraphQLObjectType = {
     operation.operationType().getText match {
       case "query" => schema.query
       case "mutation" => schema.mutation match {
@@ -286,8 +349,21 @@ object Executor {
       case None => throw new GraphQLError("Unknown operation name: " + opName)
     }
 
+
+    //    // directives can produce null pointer
+    //    directives match {
+    //      case entry: DirectivesContext => true //entry.directive() map
+    //      case _ => true
+    //    }
+
+    // Might produce Null pointer if not handled
+    val definitions = operation.variableDefinitions() match {
+      case entry: VariableDefinitionsContext => entry.variableDefinition().toList
+      case _ => List.empty
+    }
+
     val variables = getVariableValues(schema,
-      operation.variableDefinitions().variableDefinition().toList,
+      definitions,
       variableValues
     )
 

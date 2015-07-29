@@ -8,3 +8,5 @@ libraryDependencies += "org.antlr" % "antlr4" % "4.5"
 
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 
+libraryDependencies += "org.scala-lang" % "scala-reflect" % "2.11.5"
+

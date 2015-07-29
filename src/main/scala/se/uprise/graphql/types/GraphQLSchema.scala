@@ -1,3 +1,3 @@
 package se.uprise.graphql.types
 
-class GraphQLSchema(val query: Class[_ <: GraphQLObjectType], val mutation: Option[Class[GraphQLObjectType]] = None)
+class GraphQLSchema(val query: GraphQLObjectType, val mutation: Option[GraphQLObjectType] = None)
