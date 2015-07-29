@@ -30,8 +30,6 @@ GraphQL grammar derived from:
 
 */
 
-
-
 grammar GraphQl;
 
 document
@@ -51,7 +49,6 @@ operationDefinition
 selectionSet
     :   '{' selection (','? selection)* '}'
     ;
-
 
 operationType
     :   'query'
@@ -108,6 +105,7 @@ directives
 directive
     :   '@' NAME ':' valueOrVariable
     |   '@' NAME
+    |   '@' NAME '(' argument ')'
     ;
 
 typeCondition
