@@ -98,6 +98,7 @@ class Query extends GraphQLObjectType {
   override def getFields(entry: GraphQLObjectType): Map[String, GraphQLFieldDefinition] = {
     val fields = this.getClassFields(this)
 
+
     Map(
       "hero" -> new GraphQLFieldDefinition("hero", "desc", List.empty, fields("hero"), ""),
       "human" -> new GraphQLFieldDefinition(

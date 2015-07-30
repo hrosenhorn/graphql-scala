@@ -89,8 +89,6 @@ object Executor {
                     fields: Map[String, List[FieldContext]]): Any = {
 
     val finalResults = fields.keys.foldLeft(Map[String, Any]())((results: Map[String, Any], responseName) => {
-      println("TJOHEJ")
-
       val fieldASTs = fields(responseName)
       val result = resolveField(exeContext, parentType, source, fieldASTs)
       // fields ++ Map(name -> merged)
@@ -120,15 +118,16 @@ object Executor {
     val fieldDef = getFieldDef(exeContext.schema, parentType, fieldAST)
     //val args: List[universe.Type] = resolveFn.typeSignature.typeArgs
 
+    val parentTypeMirror = universe.runtimeMirror(getClass.getClassLoader).reflect(parentType)
 
     val args = extractor.getArgumentValues(
       fieldDef.args,
       fieldAST.arguments(),
       exeContext.variables)
 
-    // Some dynamic reflection invocation on the resolve method symbol
-    //parentType.
-
+    //val resolveFn = fieldDef.resolve
+    val result = parentTypeMirror.reflectMethod(fieldDef.resolve)()
+    result
   }
 
   /**
@@ -177,7 +176,6 @@ object Executor {
                     selectionSet: SelectionSetContext,
                     fields: Map[String, List[FieldContext]] = Map.empty,
                     visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[FieldContext]] = {
-
 
     selectionSet.selection().foldLeft(fields)((result, selection) =>
 

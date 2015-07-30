@@ -1,7 +1,7 @@
 package se.uprise.graphql.execution
 
 import se.uprise.graphql.types.{GraphQLFieldArgument, GraphQLInputType, GraphQLSchema}
-import se.uprise.parser.GraphQlParser.{VariableDefinitionContext, ArgumentsContext}
+import se.uprise.parser.GraphQlParser.{ValueOrVariableContext, VariableDefinitionContext, ArgumentsContext}
 
 import scala.reflect.runtime._
 import scala.collection.JavaConversions._
@@ -13,24 +13,26 @@ object ValueExtractor {
    * definitions and list of argument AST nodes.
    */
   // FIXME: Better Type for variables (guessing some decendant of InputType)
-  def getArgumentValues(argDefs: List[GraphQLFieldArgument[_ <: GraphQLInputType]],
+  def getArgumentValues(argDefs: List[GraphQLFieldArgument[_ <: GraphQLInputType]] = List.empty,
                         argASTs: ArgumentsContext,
-                        variables: Map[String, Any]) = {
+                        variables: Map[String, Any]): Map[String, GraphQLInputType] = {
 
+    // Avoid null pointer
+    val argASTMap = Option(argASTs) match {
+      case Some(value) => value.argument().toList.map({ entry =>
+        val valueOrVariable = entry.valueOrVariable()
+        entry.NAME().getText -> valueOrVariable
+      }).toMap
+      case None => Map[String, ValueOrVariableContext]()
+    }
 
-    //val finalResults = fields.keys.foldLeft(Map[String, Any]())((results: Map[String, Any], responseName) => {
-
-    // FIXME: Can we get null here?
-    val argASTMap = argASTs.argument().toList.map({ entry =>
-      val valueOrVariable = entry.valueOrVariable()
-      entry.NAME().getText -> valueOrVariable
-    }).toMap
-
-    argDefs.foldLeft(Map[String, Any]())((results: Map[String, Any], argDef: GraphQLFieldArgument[_ <: GraphQLInputType]) => {
+    argDefs.foldLeft(Map[String, GraphQLInputType]())((results: Map[String, GraphQLInputType], argDef: GraphQLFieldArgument[_ <: GraphQLInputType]) => {
       val name = argDef.name
       val valueAST = argASTMap(name)
 
-      //results ++ Map(name -> coerceValueAST(argDef.), valueAST, variables))
+      throw new Exception("FIXME: Implement")
+      //results ++ Map(name -> CoerceValueAST(valueAST, variables))
+      results// ++ Map(name -> null)
     })
 
 
