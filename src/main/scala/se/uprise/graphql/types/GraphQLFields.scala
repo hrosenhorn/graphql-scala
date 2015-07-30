@@ -6,7 +6,7 @@ import se.uprise.parser.GraphQlParser.SelectionContext
 import scala.reflect.runtime._
 
 // FIXME: Better type for default value
-class GraphQLFieldArgument[T <: GraphQLInputType](name: String,
+case class GraphQLFieldArgument[T <: GraphQLInputType](name: String,
                                                   description: String,
                                                   defaultValue: Any)
 

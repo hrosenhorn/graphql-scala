@@ -14,22 +14,33 @@ object ValueExtractor {
    */
   // FIXME: Better Type for variables (guessing some decendant of InputType)
   def getArgumentValues(argDefs: List[GraphQLFieldArgument[_ <: GraphQLInputType]],
-                        arguments: ArgumentsContext,
+                        argASTs: ArgumentsContext,
                         variables: Map[String, Any]) = {
 
 
     //val finalResults = fields.keys.foldLeft(Map[String, Any]())((results: Map[String, Any], responseName) => {
 
     // FIXME: Can we get null here?
-//    arguments.argument().toList.map({ entry =>
-//      val valueOrVariable = entry.valueOrVariable()
-//      val valueOrVariable = entry.valueOrVariable()
-//      entry.NAME().getText -> valueOrVariable
-//    }).toMap
+    val argASTMap = argASTs.argument().toList.map({ entry =>
+      val valueOrVariable = entry.valueOrVariable()
+      entry.NAME().getText -> valueOrVariable
+    }).toMap
+
+    argDefs.foldLeft(Map[String, Any]())((results: Map[String, Any], argDef: GraphQLFieldArgument[_ <: GraphQLInputType]) => {
+      val name = argDef.name
+      val valueAST = argASTMap(name)
+
+      //results ++ Map(name -> coerceValueAST(argDef.), valueAST, variables))
+    })
 
 
   }
 
+  /**
+   * Given a type and a value AST node known to match this type, build a
+   * runtime value.
+   */
+  //def coerceValueAST(typ: Class[GraphQLType], )
 
 
   /**
