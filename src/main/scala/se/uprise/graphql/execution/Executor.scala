@@ -44,6 +44,8 @@ case class ExecutionResult(data: Any, errors: List[GraphQLFormattedError])
 
 
 object Executor {
+  private val extractor = ValueExtractor
+
   def apply(schema: GraphQLSchema,
             root: Any,
             ast: DocumentContext,
@@ -100,16 +102,7 @@ object Executor {
     true
   }
 
-  /**
-   * Prepares an object map of argument values given a list of argument
-   * definitions and list of argument AST nodes.
-   */
-  // FIXME: Better Type for variables (guessing some decendant of InputType)
-  def getArgumentValues(argDefs: List[universe.Type],
-                        arguments: ArgumentsContext,
-                        variables: Map[String, Any]) = {
 
-  }
 
   /**
    * Resolves the field on the given source object. In particular, this
@@ -124,15 +117,16 @@ object Executor {
                    fieldASTs: List[FieldContext]): Any = {
     val fieldAST = fieldASTs.head
 
-    val resolveFn = getFieldDef(exeContext.schema, parentType, fieldAST)
-    val args: List[universe.Type] = resolveFn.typeSignature.typeArgs
+    val fieldDef = getFieldDef(exeContext.schema, parentType, fieldAST)
+    //val args: List[universe.Type] = resolveFn.typeSignature.typeArgs
 
 
-    getArgumentValues(
-      args,
+    val args = extractor.getArgumentValues(
+      fieldDef.args,
       fieldAST.arguments(),
       exeContext.variables)
 
+    // Some dynamic reflection invocation on the resolve method symbol
     //parentType.
 
   }
@@ -158,41 +152,19 @@ object Executor {
   //    }
   //  }
 
-  def isAnnotatedWithField(candidate: reflect.runtime.universe.Symbol) = {
-    val qlFieldAnnotationType = universe.typeOf[QLField]
-    val annotation: Option[reflect.runtime.universe.Annotation] = candidate.annotations.find(a => a.tpe == qlFieldAnnotationType)
-    annotation match {
-      case Some(value) => true
-      case _ => false
-    }
-  }
 
-  // FIXME: This being what it is we get something going, refine, cache, make performant
-  def getFields(candidate: GraphQLObjectType) = {
-    val typ = universe.runtimeMirror(candidate.getClass.getClassLoader).classSymbol(candidate.getClass)
-
-    //val typ: universe.ClassSymbol = universe.runtimeMirror(clazzType.getClassLoader).classSymbol(clazzType)
-
-    val members: universe.MemberScope = typ.typeSignature.members
-    val fields = members.flatMap({ entry =>
-      isAnnotatedWithField(entry) match {
-        case true => Some(entry.name.toString -> entry.asMethod)
-        case _ => None
-      }
-    }).toMap
-    fields
-  }
 
   def getFieldDef(schema: GraphQLSchema,
                   parentType: GraphQLObjectType,
-                  fieldAST: FieldContext): universe.MethodSymbol = {
+                  fieldAST: FieldContext): GraphQLFieldDefinition = {
     val name = fieldAST.fieldName().NAME().getText
 
     //FIXME: Implement support for the introspection
 
     //parentType.get
-
-    getFields(parentType)(name)
+    
+    parentType.getFields(parentType)(name)
+    //getFields(parentType)(name)
   }
 
 
@@ -362,7 +334,7 @@ object Executor {
       case _ => List.empty
     }
 
-    val variables = getVariableValues(schema,
+    val variables = extractor.getVariableValues(schema,
       definitions,
       variableValues
     )
@@ -370,38 +342,4 @@ object Executor {
     ExecutionContext(schema, fragments, root, operation, variables, errors)
   }
 
-
-  /**
-   * Prepares an object map of variables of the correct type based on the provided
-   * variable definitions and arbitrary input. If the input cannot be coerced
-   * to match the variable definitions, a GraphQLError will be thrown.
-   */
-  /*
-   FIXME: Replace Any types with proper Types resolved from the variableValues
-   Ex: query Example($size: Int) {
-   variableValues = { size: 100 }
-    */
-
-  def getVariableValues(schema: GraphQLSchema,
-                        definitionASTs: List[VariableDefinitionContext] = List.empty,
-                        variableValues: Map[String, String] = Map.empty): Map[String, Any] = {
-
-
-    // FIXME: Implement
-    //    definitionASTs map { definition =>
-    //      val varName = definition.variable().NAME().getText
-    //    }
-
-    Map.empty
-  }
-
-  /**
-   * Given a variable definition, and any value of input, return a value which
-   * adheres to the variable definition, or throw an error.
-   */
-  def getVariableValue(schema: GraphQLSchema,
-                       definitionAST: VariableDefinitionContext,
-                       input: String) = {
-
-  }
 }

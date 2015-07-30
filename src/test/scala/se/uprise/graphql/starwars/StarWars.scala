@@ -4,9 +4,7 @@ import se.uprise.graphql.annotation.{QLField, QLInterface, QLObject}
 import se.uprise.graphql.types._
 
 import scala.annotation.StaticAnnotation
-
-
-
+import scala.reflect.runtime._
 
 
 @QLInterface(desc = "A character in the Star Wars Trilogy")
@@ -36,6 +34,18 @@ class Human(_id: String, _name: String, _friends: Seq[Int], _appearsIn: Seq[Int]
 
   @QLField()
   def homePlanet = new GraphQLString(_homePlanet)
+
+  // This is the part we wish to auto generate
+  override def getFields(entry: GraphQLObjectType): Map[String, GraphQLFieldDefinition] = {
+    val fields = this.getClassFields(this)
+
+    Map(
+      "id" -> new GraphQLFieldDefinition("id", "desc", List.empty, fields("id"), ""),
+      "name" -> new GraphQLFieldDefinition("name", "desc", List.empty, fields("name"), ""),
+      "friends" -> new GraphQLFieldDefinition("friends", "desc", List.empty, fields("friends"), ""),
+      "homePlanet" -> new GraphQLFieldDefinition("homePlanet", "desc", List.empty, fields("homePlanet"), "")
+    )
+  }
 }
 
 @QLObject(desc = "A mechanical creature in the Star Wars universe.")
@@ -52,6 +62,18 @@ class Droid(_id: String, _name: String, _friends: Seq[Int], _appearsIn: Seq[Int]
 
   @QLField()
   def primaryFunction = new GraphQLString(_primaryFunction)
+
+  // This is the part we wish to auto generate
+  override def getFields(entry: GraphQLObjectType): Map[String, GraphQLFieldDefinition] = {
+    val fields = this.getClassFields(this)
+
+    Map(
+      "id" -> new GraphQLFieldDefinition("id", "desc", List.empty, fields("id"), ""),
+      "name" -> new GraphQLFieldDefinition("name", "desc", List.empty, fields("name"), ""),
+      "friends" -> new GraphQLFieldDefinition("friends", "desc", List.empty, fields("friends"), ""),
+      "primaryFunction" -> new GraphQLFieldDefinition("primaryFunction", "desc", List.empty, fields("primaryFunction"), "")
+    )
+  }
 }
 
 @QLObject()
@@ -70,6 +92,27 @@ class Query extends GraphQLObjectType {
   @QLField()
   def droid(id: GraphQLString): Droid = {
     Data.getCharacter(id.value).asInstanceOf[Droid]
+  }
+
+  // This is the part we wish to auto generate
+  override def getFields(entry: GraphQLObjectType): Map[String, GraphQLFieldDefinition] = {
+    val fields = this.getClassFields(this)
+
+    Map(
+      "hero" -> new GraphQLFieldDefinition("hero", "desc", List.empty, fields("hero"), ""),
+      "human" -> new GraphQLFieldDefinition(
+        "human",
+        "desc",
+        List(new GraphQLFieldArgument[GraphQLString]("id", "desc", "BLANK")),
+        fields("human"),
+        ""),
+      "droid" -> new GraphQLFieldDefinition(
+        "droid",
+        "desc",
+        List(new GraphQLFieldArgument[GraphQLString]("id", "desc", "BLANK")),
+        fields("droid"),
+        "")
+    )
   }
 }
 
