@@ -1,5 +1,6 @@
 package se.uprise.graphql.execution
 
+import se.uprise.graphql.error.GraphQLError
 import se.uprise.graphql.types.GraphQLSchema
 import se.uprise.parser.GraphQlParser.{OperationDefinitionContext, FragmentDefinitionContext}
 
@@ -18,6 +19,6 @@ case class ExecutionContext(
                              root: Any,
                              operation: OperationDefinitionContext,
                              variables: Map[String, Any],
-                             errors: List[Exception]) {
+                             errors: List[GraphQLError]) {
 
 }

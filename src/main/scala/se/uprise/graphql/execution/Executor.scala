@@ -126,8 +126,27 @@ object Executor {
       exeContext.variables)
 
     //val resolveFn = fieldDef.resolve
-    val result = parentTypeMirror.reflectMethod(fieldDef.resolve)()
-    result
+    try {
+      val result = parentTypeMirror.reflectMethod(fieldDef.resolve)().asInstanceOf[GraphQLOutputType]
+      completeValueCatchingError(exeContext, null, fieldASTs, result)
+
+    } catch {
+      case e: Exception =>
+        // FIXME: Support for stack trace
+        val reportedError = new GraphQLError(e.getMessage, fieldASTs)
+        //fieldAST
+        //exeContext.errors
+
+    }
+  }
+
+  // FIXME: Better return type
+  // FIXME: Better type for result
+  def completeValueCatchingError(exeContext: ExecutionContext,
+                                  fieldType: GraphQLType,
+                                  fieldASTs: List[FieldContext],
+                                  result: GraphQLOutputType): Any = {
+
   }
 
   /**
@@ -160,10 +179,7 @@ object Executor {
 
     //FIXME: Implement support for the introspection
 
-    //parentType.get
-    
     parentType.getFields(parentType)(name)
-    //getFields(parentType)(name)
   }
 
 
@@ -284,7 +300,7 @@ object Executor {
                             ast: DocumentContext,
                             operationName: String,
                             variableValues: Map[String, String] = Map.empty,
-                            errors: List[Exception]): ExecutionContext = {
+                            errors: List[GraphQLError]): ExecutionContext = {
 
     // Convert from Java to Scala
     val definitionSet: List[DefinitionContext] = ast.definition().toList
@@ -318,13 +334,6 @@ object Executor {
       case Some(entry) => entry
       case None => throw new GraphQLError("Unknown operation name: " + opName)
     }
-
-
-    //    // directives can produce null pointer
-    //    directives match {
-    //      case entry: DirectivesContext => true //entry.directive() map
-    //      case _ => true
-    //    }
 
     // Might produce Null pointer if not handled
     val definitions = operation.variableDefinitions() match {
