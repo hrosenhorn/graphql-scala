@@ -3,7 +3,7 @@ package se.uprise.graphql.execution
 import se.uprise.graphql.error.GraphQLError
 import se.uprise.graphql.types.GraphQLSchema
 import se.uprise.parser.GraphQlParser.{OperationDefinitionContext, FragmentDefinitionContext}
-
+import scala.collection.mutable.ListBuffer
 
 /**
  * Data that must be available at all points during query execution.
@@ -19,6 +19,6 @@ case class ExecutionContext(
                              root: Any,
                              operation: OperationDefinitionContext,
                              variables: Map[String, Any],
-                             errors: List[GraphQLError]) {
+                             errors: ListBuffer[Exception]) {
 
 }

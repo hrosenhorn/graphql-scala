@@ -8,6 +8,7 @@ import se.uprise.parser.GraphQlParser
 import se.uprise.parser.GraphQlParser._
 import scala.annotation.StaticAnnotation
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ListBuffer
 import scala.reflect.api.JavaUniverse
 import scala.reflect.runtime._
 import scala.reflect.runtime.universe
@@ -53,7 +54,7 @@ object Executor {
             variableValues: Map[String, String] = Map.empty): ExecutionResult = {
 
     // FIXME: We cannot pass a immutable List of errors in the execution context
-    val exeContext = buildExecutionContext(schema, root, ast, operationName, variableValues, List.empty)
+    val exeContext = buildExecutionContext(schema, root, ast, operationName, variableValues, new ListBuffer[Exception]())
 
     // FIXME: Result is currently Any
     val result = executeOperation(exeContext, root, exeContext.operation)
@@ -101,7 +102,6 @@ object Executor {
   }
 
 
-
   /**
    * Resolves the field on the given source object. In particular, this
    * figures out the value that the field returns by calling its resolve function,
@@ -112,7 +112,7 @@ object Executor {
   def resolveField(exeContext: ExecutionContext,
                    parentType: GraphQLObjectType,
                    source: Any,
-                   fieldASTs: List[FieldContext]): Any = {
+                   fieldASTs: List[FieldContext]): GraphQLOutputType = {
     val fieldAST = fieldASTs.head
 
     val fieldDef = getFieldDef(exeContext.schema, parentType, fieldAST)
@@ -127,26 +127,73 @@ object Executor {
 
     //val resolveFn = fieldDef.resolve
     try {
+      // FIXME: Add arguments to resolve method (x.toSeq:_*)
       val result = parentTypeMirror.reflectMethod(fieldDef.resolve)().asInstanceOf[GraphQLOutputType]
-      completeValueCatchingError(exeContext, null, fieldASTs, result)
-
+      completeValueCatchingError(exeContext, fieldASTs, result)
     } catch {
       case e: Exception =>
+        // FIXME: Add support for NonNull fields and throw error if found
+
         // FIXME: Support for stack trace
         val reportedError = new GraphQLError(e.getMessage, fieldASTs)
         //fieldAST
-        //exeContext.errors
-
+        exeContext.errors += reportedError
+        null // FIXME: Use Option for this?
     }
   }
 
   // FIXME: Better return type
   // FIXME: Better type for result
   def completeValueCatchingError(exeContext: ExecutionContext,
-                                  fieldType: GraphQLType,
-                                  fieldASTs: List[FieldContext],
-                                  result: GraphQLOutputType): Any = {
+                                 fieldASTs: List[FieldContext],
+                                 result: GraphQLOutputType): GraphQLOutputType = {
 
+    // This is only for clarification when porting from JS
+    val fieldType = result
+
+    // If the field type is non-nullable, then it is resolved without any
+    // protection from errors.
+    fieldType match {
+      case nonNull: GraphQLNonNull => completeValue(exeContext, fieldASTs, result);
+      case _ =>
+        try {
+          val completed = completeValue(exeContext, fieldASTs, result)
+          // FIXME: Support for Thenable/Futures
+          completed
+        } catch {
+          case e: Exception => exeContext.errors += e
+            null // FIXME: Use Option for this?
+        }
+    }
+
+  }
+
+
+  /**
+   * Implements the instructions for completeValue as defined in the
+   * "Field entries" section of the spec.
+   *
+   * If the field type is Non-Null, then this recursively completes the value
+   * for the inner type. It throws a field error if that completion returns null,
+   * as per the "Nullability" section of the spec.
+   *
+   * If the field type is a List, then this recursively completes the value
+   * for the inner type on each item in the list.
+   *
+   * If the field type is a Scalar or Enum, ensures the completed value is a legal
+   * value of the type by calling the `coerce` method of GraphQL type definition.
+   *
+   * Otherwise, the field type expects a sub-selection set, and will complete the
+   * value by evaluating all sub-selections.
+   */
+  def completeValue(exeContext: ExecutionContext,
+                    fieldASTs: List[FieldContext],
+                    result: GraphQLOutputType): GraphQLOutputType = {
+    // This is only for clarification when porting from JS
+    val fieldType = result
+
+    // FIXME: Support for Thenable/Futures
+    new GraphQLString("PLACEHOLDER")
   }
 
   /**
@@ -158,20 +205,6 @@ object Executor {
    * added to the query type, but that would require mutating type
    * definitions, which would cause issues.
    */
-
-  //  def isAnnotatedWith(candidate: Class[_ <: GraphQLObjectType], annotation: Class[_ <: StaticAnnotation]) = {
-  //    val typ: universe.ClassSymbol = universe.runtimeMirror(candidate.getClassLoader).classSymbol(candidate)
-  //    val annotations: List[reflect.runtime.universe.Annotation] = typ.annotations
-  //    val qlFieldAnnotationType = universe.typeOf[QLField]
-  //    val annotation: Option[reflect.runtime.universe.Annotation] = annotations.find(a => a.tpe == qlFieldAnnotationType)
-  //    annotation match {
-  //      case Some(value) => true
-  //      case _ => false
-  //    }
-  //  }
-
-
-
   def getFieldDef(schema: GraphQLSchema,
                   parentType: GraphQLObjectType,
                   fieldAST: FieldContext): GraphQLFieldDefinition = {
@@ -250,7 +283,7 @@ object Executor {
   def doesFragmentConditionMatch(exeContext: ExecutionContext,
                                  fragment: ParserRuleContext,
                                  typ: GraphQLObjectType): Boolean = {
-    return true
+    true // Placeholder value
   }
 
   /**
@@ -300,7 +333,7 @@ object Executor {
                             ast: DocumentContext,
                             operationName: String,
                             variableValues: Map[String, String] = Map.empty,
-                            errors: List[GraphQLError]): ExecutionContext = {
+                            errors: ListBuffer[Exception]): ExecutionContext = {
 
     // Convert from Java to Scala
     val definitionSet: List[DefinitionContext] = ast.definition().toList
