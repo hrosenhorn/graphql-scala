@@ -10,7 +10,7 @@ import scala.reflect.runtime._
 @QLInterface(desc = "A character in the Star Wars Trilogy")
 trait Character extends GraphQLInterfaceType {
   @QLField()
-  def id: GraphQLString
+  def id: GraphQLNonNull[GraphQLString]
 
   @QLField()
   def name: GraphQLString
@@ -24,7 +24,7 @@ trait Character extends GraphQLInterfaceType {
 @QLObject(desc = "A humanoid creature in the Star Wars universe.")
 class Human(_id: String, _name: String, _friends: Seq[Int], _appearsIn: Seq[Int], _homePlanet: String) extends GraphQLObjectType with Character {
   @QLField()
-  override def id: GraphQLString = new GraphQLString(_id)
+  override def id: GraphQLNonNull[GraphQLString] = new GraphQLNonNull[GraphQLString](new GraphQLString(_id))
 
   @QLField()
   override def name: GraphQLString = new GraphQLString(_name)
@@ -52,7 +52,7 @@ class Human(_id: String, _name: String, _friends: Seq[Int], _appearsIn: Seq[Int]
 class Droid(_id: String, _name: String, _friends: Seq[Int], _appearsIn: Seq[Int], _primaryFunction: String) extends GraphQLObjectType with Character {
 
   @QLField()
-  override def id: GraphQLString = new GraphQLString(_id)
+  override def id: GraphQLNonNull[GraphQLString] = new GraphQLNonNull[GraphQLString](new GraphQLString(_id))
 
   @QLField()
   override def name: GraphQLString = new GraphQLString(_name)
@@ -85,13 +85,13 @@ class Query extends GraphQLObjectType {
   }
 
   @QLField()
-  def human(id: GraphQLString): Human = {
-    Data.getCharacter(id.value).asInstanceOf[Human]
+  def human(id: GraphQLNonNull[GraphQLString]): Human = {
+    Data.getCharacter(id.item.value).asInstanceOf[Human]
   }
 
   @QLField()
-  def droid(id: GraphQLString): Droid = {
-    Data.getCharacter(id.value).asInstanceOf[Droid]
+  def droid(id: GraphQLNonNull[GraphQLString]): Droid = {
+    Data.getCharacter(id.item.value).asInstanceOf[Droid]
   }
 
   // This is the part we wish to auto generate
@@ -104,13 +104,13 @@ class Query extends GraphQLObjectType {
       "human" -> new GraphQLFieldDefinition(
         "human",
         "desc",
-        List(new GraphQLFieldArgument[GraphQLString]("id", "desc", "BLANK")),
+        List(new GraphQLFieldArgument[GraphQLNonNull[GraphQLString]]("id", "desc", "BLANK")),
         fields("human"),
         ""),
       "droid" -> new GraphQLFieldDefinition(
         "droid",
         "desc",
-        List(new GraphQLFieldArgument[GraphQLString]("id", "desc", "BLANK")),
+        List(new GraphQLFieldArgument[GraphQLNonNull[GraphQLString]]("id", "desc", "BLANK")),
         fields("droid"),
         "")
     )

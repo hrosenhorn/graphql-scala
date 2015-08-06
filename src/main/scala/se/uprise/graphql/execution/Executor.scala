@@ -1,16 +1,11 @@
 package se.uprise.graphql.execution
 
 import org.antlr.v4.runtime.ParserRuleContext
-import se.uprise.graphql.annotation.QLField
 import se.uprise.graphql.error.{GraphQLError, GraphQLFormattedError}
 import se.uprise.graphql.types._
-import se.uprise.parser.GraphQlParser
 import se.uprise.parser.GraphQlParser._
-import scala.annotation.StaticAnnotation
 import scala.collection.JavaConversions._
 import scala.collection.mutable.ListBuffer
-import scala.reflect.api.JavaUniverse
-import scala.reflect.runtime._
 import scala.reflect.runtime.universe
 
 
@@ -144,17 +139,24 @@ object Executor {
 
   // FIXME: Better return type
   // FIXME: Better type for result
+
+  import scala.reflect.runtime.universe._
+
   def completeValueCatchingError(exeContext: ExecutionContext,
                                  fieldASTs: List[FieldContext],
-                                 result: GraphQLOutputType): GraphQLOutputType = {
+                                 result: GraphQLType): GraphQLOutputType = {
 
     // This is only for clarification when porting from JS
     val fieldType = result
 
     // If the field type is non-nullable, then it is resolved without any
     // protection from errors.
+
+
     fieldType match {
-      case nonNull: GraphQLNonNull => completeValue(exeContext, fieldASTs, result);
+
+      case nonNull: GraphQLNonNull[_] => completeValue(exeContext, fieldASTs, result)
+
       case _ =>
         try {
           val completed = completeValue(exeContext, fieldASTs, result)
@@ -188,11 +190,41 @@ object Executor {
    */
   def completeValue(exeContext: ExecutionContext,
                     fieldASTs: List[FieldContext],
-                    result: GraphQLOutputType): GraphQLOutputType = {
+                    result: GraphQLType): GraphQLOutputType = {
     // This is only for clarification when porting from JS
     val fieldType = result
 
     // FIXME: Support for Thenable/Futures
+    fieldType match {
+      case entry: GraphQLNonNull[_] => completeValue(exeContext, fieldASTs, entry.item)
+
+      case entry: GraphQLList[_] => entry.items map { item =>
+        val completedValue = completeValueCatchingError(exeContext, fieldASTs, item)
+        // FIXME: Check for Futures/isThenable
+        completedValue
+      }
+      case entry: GraphQLScalarType =>
+
+      case entry: GraphQLEnumType =>
+      case entry: GraphQLObjectType =>
+        // Field type must be Object, Interface or Union and expect sub-selections.
+        val subFieldASTs = fieldASTs map { fieldAst =>
+          //fieldAst.selectionSet()
+
+          //          collectFields(exeContext,
+          //          null,
+          //            fieldAst.selectionSet(),
+          //          sub
+          //          )
+        }
+
+      // FIXME: We are skipping the resolveType piece here from the JS impl
+
+
+      case _ => throw new GraphQLError("Unknown field type when trying to complete value", fieldASTs)
+    }
+
+
     new GraphQLString("PLACEHOLDER")
   }
 

@@ -1,3 +1,3 @@
 package se.uprise.graphql.types
 
-trait GraphQLNonNull extends GraphQLOutputType
+class GraphQLNonNull[T <: GraphQLType](val item: T) extends GraphQLOutputType with GraphQLInputType
