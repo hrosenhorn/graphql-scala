@@ -48,7 +48,6 @@ object Executor {
             operationName: String,
             variableValues: Map[String, String] = Map.empty): ExecutionResult = {
 
-    // FIXME: We cannot pass a immutable List of errors in the execution context
     val exeContext = buildExecutionContext(schema, root, ast, operationName, variableValues, new ListBuffer[Exception]())
 
     // FIXME: Result is currently Any
@@ -82,18 +81,16 @@ object Executor {
   def executeFields(exeContext: ExecutionContext,
                     parentType: GraphQLObjectType,
                     source: Any,
-                    fields: Map[String, List[FieldContext]]): Any = {
+                    fields: Map[String, List[FieldContext]]): GraphQLOutputObjectType = {
 
-    val finalResults = fields.keys.foldLeft(Map[String, Any]())((results: Map[String, Any], responseName) => {
+    val finalResults = fields.keys.foldLeft(Map[String, GraphQLOutputType]())((results: Map[String, GraphQLOutputType], responseName) => {
       val fieldASTs = fields(responseName)
       val result = resolveField(exeContext, parentType, source, fieldASTs)
       // fields ++ Map(name -> merged)
       results ++ Map(responseName -> result)
     })
 
-    finalResults
-    //selectionSet.selection().foldLeft(fields)((result, selection) =>
-    true
+    new GraphQLOutputObjectType(finalResults)
   }
 
 
@@ -196,36 +193,58 @@ object Executor {
 
     // FIXME: Support for Thenable/Futures
     fieldType match {
-      case entry: GraphQLNonNull[_] => completeValue(exeContext, fieldASTs, entry.item)
-
-      case entry: GraphQLList[_] => entry.items map { item =>
-        val completedValue = completeValueCatchingError(exeContext, fieldASTs, item)
-        // FIXME: Check for Futures/isThenable
-        completedValue
-      }
-      case entry: GraphQLScalarType =>
-
-      case entry: GraphQLEnumType =>
-      case entry: GraphQLObjectType =>
-        // Field type must be Object, Interface or Union and expect sub-selections.
-        val subFieldASTs = fieldASTs map { fieldAst =>
-          //fieldAst.selectionSet()
-
-          //          collectFields(exeContext,
-          //          null,
-          //            fieldAst.selectionSet(),
-          //          sub
-          //          )
+      case entry: GraphQLNonNull[_] =>
+        val completed = completeValue(exeContext, fieldASTs, entry.item)
+        if (completed == null) {
+          throw new GraphQLError("Cannot return null for non-nullable type.", fieldASTs)
         }
 
-      // FIXME: We are skipping the resolveType piece here from the JS impl
+        completed
 
+      case entry: GraphQLList[_] =>
+        val completedResults = entry.items map { item =>
+          val completedValue = completeValueCatchingError(exeContext, fieldASTs, item)
+          // FIXME: Check for Futures/isThenable
+          completedValue
+        }
+
+        // FIXME: Not sure about this one
+        new GraphQLList[GraphQLType](completedResults)
+
+      case entry: GraphQLScalarType => entry
+
+      case entry: GraphQLEnumType => entry.coerce
+
+      // FIXME: We are skipping the resolveType piece here from the JS impl
+      // FIXME: Do we need to do anything special for GraphQLInterfaceType or GraphQLUnionType
+      case entry: GraphQLObjectType =>
+        // Field type must be Object, Interface or Union and expect sub-selections.
+
+        var subFieldASTs: Map[String, List[FieldContext]] = Map.empty
+        val visitedFragmentNames: Map[String, Boolean] = Map.empty
+
+        fieldASTs foreach { fieldAst =>
+          val selectionSet = fieldAst.selectionSet()
+          selectionSet match {
+            case entry: SelectionSetContext =>
+              subFieldASTs = collectFields(exeContext,
+                null, // FIXME: Can we get rid of this one?
+                selectionSet,
+                subFieldASTs,
+                visitedFragmentNames
+              )
+            case _ =>
+          }
+
+        }
+
+        // TODO: Something if off in here when completing the object type
+
+        // FIXME: Should we really pass "entry" as second argument?
+        executeFields(exeContext, entry, result, subFieldASTs);
 
       case _ => throw new GraphQLError("Unknown field type when trying to complete value", fieldASTs)
     }
-
-
-    new GraphQLString("PLACEHOLDER")
   }
 
   /**
@@ -253,7 +272,7 @@ object Executor {
    * the passed in map of fields, and returns it at the end.
    */
   def collectFields(exeContext: ExecutionContext,
-                    typ: GraphQLObjectType,
+                    typ: GraphQLObjectType, // FIXME: Can we get rid of this one?
                     selectionSet: SelectionSetContext,
                     fields: Map[String, List[FieldContext]] = Map.empty,
                     visitedFragmentNames: Map[String, Boolean] = Map.empty): Map[String, List[FieldContext]] = {
@@ -312,6 +331,7 @@ object Executor {
    * Determines if a fragment is applicable to the given type.
    */
   // FIXME: Implement properly
+  // FIXME: Can we get rid of the "typ" argument?
   def doesFragmentConditionMatch(exeContext: ExecutionContext,
                                  fragment: ParserRuleContext,
                                  typ: GraphQLObjectType): Boolean = {

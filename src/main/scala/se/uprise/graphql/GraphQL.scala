@@ -49,13 +49,13 @@ object GraphQL {
 
     val document: DocumentContext = parser.document()
 
-    Executor(schema,
+    val result = Executor(schema,
       rootObject,
       document,
       operationName,
       variableValues)
 
-
-    new GraphQLResult("svejs", List.empty)
+    // FIXME: Can we merge GraphQLResult and ExecutionResult?
+    new GraphQLResult(result.data, result.errors)
   }
 }
