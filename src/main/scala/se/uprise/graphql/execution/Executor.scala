@@ -36,7 +36,7 @@ import scala.reflect.runtime.universe
  * non-empty array if an error occurred.
  */
 // FIXME: root should not be type Any
-case class ExecutionResult(data: Any, errors: List[GraphQLFormattedError])
+case class ExecutionResult(data: GraphQLOutputObjectType, errors: List[GraphQLFormattedError])
 
 
 object Executor {
@@ -61,13 +61,13 @@ object Executor {
    */
   def executeOperation(exeContext: ExecutionContext,
                        root: Any,
-                       operation: OperationDefinitionContext): Any = {
+                       operation: OperationDefinitionContext): GraphQLOutputObjectType = {
 
     val rootType = getOperationRootType(exeContext.schema, operation)
 
     val fields = collectFields(exeContext, rootType, operation.selectionSet())
     operation.operationType().getText match {
-      case "mutation" => // executeFieldsSerially(exeContext, type, root, fields);
+      case "mutation" => null// executeFieldsSerially(exeContext, type, root, fields);
       case _ => executeFields(exeContext, rootType, root, fields)
     }
   }
@@ -92,7 +92,6 @@ object Executor {
 
     new GraphQLOutputObjectType(finalResults)
   }
-
 
   /**
    * Resolves the field on the given source object. In particular, this

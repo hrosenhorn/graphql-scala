@@ -9,7 +9,7 @@ import se.uprise.parser.GraphQlParser.{DocumentContext, FieldContext}
 import se.uprise.parser.{GraphQlBaseVisitor, GraphQlParser, GraphQlLexer}
 
 
-import se.uprise.graphql.types.GraphQLSchema
+import se.uprise.graphql.types.{GraphQLOutputObjectType, GraphQLSchema}
 
 
 /**
@@ -18,8 +18,7 @@ import se.uprise.graphql.types.GraphQLSchema
  * `data` is the result of a successful execution of the query.
  * `errors` is included when any errors occurred as a non-empty array.
  */
-// FIXME: Should not be type Any
-case class GraphQLResult(data: Any, errors: List[GraphQLFormattedError])
+case class GraphQLResult(data: GraphQLOutputObjectType, errors: List[GraphQLFormattedError])
 
 
 /**
