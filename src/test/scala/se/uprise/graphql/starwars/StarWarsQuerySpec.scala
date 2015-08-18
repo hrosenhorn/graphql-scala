@@ -50,17 +50,16 @@ class StarWarsQuerySpec extends FunSpec with Matchers {
           "hero" -> Map(
             "id" -> "2001",
             "name" -> "R2-D2",
-            "friends" -> Map(
-              "name" -> "Luke Skywalker",
-              "name" -> "Han Solo",
-              "name" -> "Leia Organa"
+            "friends" -> List(
+              Map("name" -> "Luke Skywalker"),
+              Map("name" -> "Han Solo"),
+              Map("name" -> "Leia Organa")
             )
           )
         )
 
         val result = StarWarsQueryHelper.testQuery(query, "")
         result should be (JsonMapper(expected))
-
       }
     }
     describe("Nested Queries") {

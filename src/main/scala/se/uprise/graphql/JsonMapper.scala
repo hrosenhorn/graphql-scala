@@ -1,6 +1,6 @@
 package se.uprise.graphql
 
-import se.uprise.graphql.types.{GraphQLString, GraphQLOutputObjectType, GraphQLOutputType}
+import se.uprise.graphql.types._
 
 import com.fasterxml.jackson.databind.{DeserializationFeature, ObjectMapper}
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
@@ -24,10 +24,11 @@ object JsonMapper {
     value.elements map { case (k,v) => k -> toPrimitive(v) }
   }
 
-  def toPrimitive(value: GraphQLOutputType): Any = {
+  def toPrimitive(value: GraphQLType): Any = {
     value match {
       case x: GraphQLString => x.value
       case x: GraphQLOutputObjectType => toPrimitive(x)
+      case x: GraphQLList[_] => x.items map { entry => toPrimitive(entry)}
     }
   }
 

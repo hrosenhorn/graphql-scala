@@ -282,13 +282,13 @@ object Executor {
       selection.field() match {
         case value: FieldContext =>
           shouldIncludeNode(exeContext, value.directives()) match {
-            case false => fields
+            case false => result
             case _ =>
               val name = getFieldEntryKey(value)
-              val merged = List(value) ++ fields.getOrElse(name, List.empty)
+              val merged = List(value) ++ result.getOrElse(name, List.empty)
 
               // The second key in the map will override the first one when merging
-              fields ++ Map(name -> merged)
+              result ++ Map(name -> merged)
           }
 
         case _ =>
@@ -299,9 +299,10 @@ object Executor {
               // FIXME: Possible logic bug, investigate
               (!shouldIncludeNode(exeContext, value.directives())
                 || !doesFragmentConditionMatch(exeContext, selection, typ)) match {
-                case false => fields
+                case false => result
                 case _ =>
-                  collectFields(exeContext, typ, value.selectionSet(), fields, visitedFragmentNames)
+                  // Should I pass down result or fields?
+                  collectFields(exeContext, typ, value.selectionSet(), result, visitedFragmentNames)
               }
             case _ =>
 
@@ -312,10 +313,10 @@ object Executor {
 
                   // FIXME: Possible logic bug, investigate
                   visitedFragmentNames.getOrElse(fragName, false) || !shouldIncludeNode(exeContext, value.directives()) match {
-                    case false => fields
+                    case false => result
                     case _ =>
                       val fragment = exeContext.fragments(fragName)
-                      fields
+                      result
 
                     // FIXME: Implement
                   }
